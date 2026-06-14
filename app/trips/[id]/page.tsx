@@ -43,6 +43,7 @@ export default function TripDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [mapCoords, setMapCoords] = useState<[number, number] | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -86,6 +87,22 @@ export default function TripDetailPage() {
     }
   }
 
+  // Resolve map coordinates: static lookup first, Mapbox geocoding as fallback
+  useEffect(() => {
+    if (!trip?.city) return;
+    const static_coords = getCityCoords(trip.city);
+    if (static_coords) { setMapCoords(static_coords); return; }
+    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+    if (!token) return;
+    fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(trip.city)}.json?types=place&limit=1&access_token=${token}`)
+      .then((r) => r.json())
+      .then((data) => {
+        const f = data.features?.[0];
+        if (f) setMapCoords([f.geometry.coordinates[0], f.geometry.coordinates[1]]);
+      })
+      .catch(() => {});
+  }, [trip]);
+
   if (authLoading) return null;
 
   if (loading) {
@@ -106,7 +123,6 @@ export default function TripDetailPage() {
   }
 
   const vibe = trip.vibe ?? "neutral";
-  const coords = trip.city ? getCityCoords(trip.city) : null;
   const tags = [
     trip.travel_style ? TRAVEL_STYLE_LABEL[trip.travel_style] : null,
     trip.budget_level ? BUDGET_LABEL[trip.budget_level] : null,
@@ -245,11 +261,11 @@ export default function TripDetailPage() {
         {/* Right — map or placeholder */}
         <div className="lg:w-[45%] h-64 lg:h-auto lg:sticky lg:top-14" style={{ minHeight: "300px" }}>
           <div className="w-full h-full p-4 lg:p-6" style={{ minHeight: "300px" }}>
-            {coords ? (
+            {mapCoords ? (
               <ClientCountryMap
                 city={trip.city ?? trip.country}
-                lng={coords[0]}
-                lat={coords[1]}
+                lng={mapCoords[0]}
+                lat={mapCoords[1]}
                 vibe={vibe}
               />
             ) : (

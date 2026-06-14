@@ -25,6 +25,8 @@ export default function MyTripsPage() {
   const [trips, setTrips] = useState<TripPublic[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [pins, setPins] = useState<MapPin[]>([]);
+
   useEffect(() => {
     if (!isAuthenticated) return;
     setLoading(true);
@@ -34,12 +36,30 @@ export default function MyTripsPage() {
       .finally(() => setLoading(false));
   }, [isAuthenticated]);
 
-  const pins: MapPin[] = trips.flatMap((t) => {
-    if (!t.city || !t.vibe) return [];
-    const coords = getCityCoords(t.city);
-    if (!coords) return [];
-    return [{ id: t.id, city: t.city, country: t.country, lng: coords[0], lat: coords[1], vibe: t.vibe }];
-  });
+  // Resolve pins — static lookup first, Mapbox geocoding for unknowns
+  useEffect(() => {
+    if (!trips.length) return;
+    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+    async function resolve() {
+      const resolved = await Promise.all(
+        trips.map(async (t) => {
+          if (!t.city || !t.vibe) return null;
+          const static_coords = getCityCoords(t.city);
+          if (static_coords) return { id: t.id, city: t.city, country: t.country, lng: static_coords[0], lat: static_coords[1], vibe: t.vibe } as MapPin;
+          if (!token) return null;
+          try {
+            const r = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(t.city)}.json?types=place&limit=1&access_token=${token}`);
+            const data = await r.json();
+            const f = data.features?.[0];
+            if (!f) return null;
+            return { id: t.id, city: t.city, country: t.country, lng: f.geometry.coordinates[0], lat: f.geometry.coordinates[1], vibe: t.vibe } as MapPin;
+          } catch { return null; }
+        })
+      );
+      setPins(resolved.filter(Boolean) as MapPin[]);
+    }
+    resolve();
+  }, [trips]);
 
   if (isLoading) {
     return (
