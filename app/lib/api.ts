@@ -3,6 +3,9 @@ import {
   TripPublic,
   TripCreate,
   TripUpdate,
+  TripStopPublic,
+  TripStopCreate,
+  TripStopUpdate,
   StrangerTipPublic,
   StrangerTipCreate,
   UserPublic,
@@ -176,6 +179,33 @@ export async function updateTrip(
 
 export async function deleteTrip(id: number): Promise<void> {
   await apiFetch(`/trips/${id}`, { method: "DELETE" });
+}
+
+// ── Trip stops ───────────────────────────────────────────────────────────────
+
+export async function createTripStop(
+  tripId: number,
+  data: TripStopCreate
+): Promise<TripStopPublic> {
+  return apiFetch<TripStopPublic>(`/trips/${tripId}/stops`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateTripStop(
+  tripId: number,
+  stopId: number,
+  data: TripStopUpdate
+): Promise<TripStopPublic> {
+  return apiFetch<TripStopPublic>(`/trips/${tripId}/stops/${stopId}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteTripStop(tripId: number, stopId: number): Promise<void> {
+  await apiFetch(`/trips/${tripId}/stops/${stopId}`, { method: "DELETE" });
 }
 
 // ── Tips ─────────────────────────────────────────────────────────────────────

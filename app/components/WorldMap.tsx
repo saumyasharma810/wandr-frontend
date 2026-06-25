@@ -9,7 +9,11 @@ import { VibeTag } from "../lib/types";
 const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
 
 export type MapPin = {
+  // Stop id — unique per pin, used as the React key.
   id: string | number;
+  // Parent trip id — every pin navigates here, even when several stops
+  // share the same trip.
+  tripId: string | number;
   city: string;
   country: string;
   lng: number;
@@ -103,7 +107,7 @@ export default function WorldMap({
               anchor="center"
               onClick={(e: { originalEvent: MouseEvent }) => {
                 e.originalEvent.stopPropagation();
-                router.push(`/trips/${pin.id}`);
+                router.push(`/trips/${pin.tripId}`);
               }}
             >
               <div title={`${pin.city}, ${pin.country}`} style={{ cursor: "pointer" }}>

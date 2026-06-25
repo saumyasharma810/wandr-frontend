@@ -4,21 +4,24 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { TripPublic } from "../lib/types";
 import { getTrips } from "../lib/api";
-import { getCityCoords } from "../lib/geocode";
+import { resolveCityCoords } from "../lib/geocode";
 import { useAuth } from "../contexts/AuthContext";
 import TripCard from "../components/TripCard";
 import ClientWorldMap from "../components/ClientWorldMap";
 import { MapPin } from "../components/WorldMap";
-import { MOCK_TRIPS, VIBE_CONFIG } from "../lib/mock-data";
+import { MOCK_TRIPS } from "../lib/mock-data";
 
-const MOCK_PINS: MapPin[] = MOCK_TRIPS.map((t) => ({
-  id: t.id,
-  city: t.city,
-  country: t.country,
-  lng: t.lng,
-  lat: t.lat,
-  vibe: t.vibe,
-}));
+const MOCK_PINS: MapPin[] = MOCK_TRIPS.flatMap((t) =>
+  t.stops.map((s) => ({
+    id: s.id,
+    tripId: t.id,
+    city: s.city,
+    country: s.country,
+    lng: s.lng,
+    lat: s.lat,
+    vibe: s.vibe ?? "neutral",
+  }))
+);
 
 export default function MyTripsPage() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -36,25 +39,26 @@ export default function MyTripsPage() {
       .finally(() => setLoading(false));
   }, [isAuthenticated]);
 
-  // Resolve pins — static lookup first, Mapbox geocoding for unknowns
+  // Resolve pins per stop — static lookup first, Mapbox geocoding for unknowns
   useEffect(() => {
     if (!trips.length) return;
-    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
     async function resolve() {
       const resolved = await Promise.all(
-        trips.map(async (t) => {
-          if (!t.city || !t.vibe) return null;
-          const static_coords = getCityCoords(t.city);
-          if (static_coords) return { id: t.id, city: t.city, country: t.country, lng: static_coords[0], lat: static_coords[1], vibe: t.vibe } as MapPin;
-          if (!token) return null;
-          try {
-            const r = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(t.city)}.json?types=place&limit=1&access_token=${token}`);
-            const data = await r.json();
-            const f = data.features?.[0];
-            if (!f) return null;
-            return { id: t.id, city: t.city, country: t.country, lng: f.geometry.coordinates[0], lat: f.geometry.coordinates[1], vibe: t.vibe } as MapPin;
-          } catch { return null; }
-        })
+        trips.flatMap((trip) =>
+          trip.stops.map(async (stop) => {
+            const coords = await resolveCityCoords(stop.city);
+            if (!coords) return null;
+            return {
+              id: stop.id,
+              tripId: trip.id,
+              city: stop.city,
+              country: stop.country,
+              lng: coords[0],
+              lat: coords[1],
+              vibe: stop.vibe ?? "neutral",
+            } as MapPin;
+          })
+        )
       );
       setPins(resolved.filter(Boolean) as MapPin[]);
     }
@@ -106,66 +110,9 @@ export default function MyTripsPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {MOCK_TRIPS.map((trip) => {
-              const cfg = VIBE_CONFIG[trip.vibe];
-              return (
-                <Link
-                  key={trip.id}
-                  href={`/trips/${trip.id}`}
-                  style={{ textDecoration: "none" }}
-                >
-                  <article
-                    className="flex flex-col gap-3 p-6 h-full transition-all duration-150"
-                    style={{
-                      backgroundColor: "#F2EFE9",
-                      border: "1px solid #E8E2D9",
-                      borderRadius: "8px",
-                      boxShadow: "0 2px 12px rgba(44, 40, 37, 0.08)",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = "translateY(-2px)";
-                      e.currentTarget.style.boxShadow = "0 6px 20px rgba(44, 40, 37, 0.12)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = "translateY(0)";
-                      e.currentTarget.style.boxShadow = "0 2px 12px rgba(44, 40, 37, 0.08)";
-                    }}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h3
-                          className="text-lg font-semibold leading-tight"
-                          style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#2C2825" }}
-                        >
-                          {trip.city}
-                        </h3>
-                        <p className="text-sm mt-0.5" style={{ color: "#8C8279" }}>{trip.country}</p>
-                      </div>
-                      <span
-                        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium flex-shrink-0"
-                        style={{ backgroundColor: cfg.bg, color: cfg.text, borderRadius: "9999px" }}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cfg.dot }} />
-                        {cfg.label}
-                      </span>
-                    </div>
-                    <p className="text-sm leading-relaxed line-clamp-3" style={{ color: "#2C2825" }}>
-                      {trip.notes}
-                    </p>
-                    <div className="flex items-center gap-2 mt-auto pt-1">
-                      <span className="text-xs" style={{ color: "#8C8279" }}>{trip.companions}</span>
-                      <span className="text-xs" style={{ color: "#8C8279" }}>
-                        ·{" "}
-                        {new Date(trip.date).toLocaleDateString("en-US", {
-                          month: "long",
-                          year: "numeric",
-                        })}
-                      </span>
-                    </div>
-                  </article>
-                </Link>
-              );
-            })}
+            {MOCK_TRIPS.map((trip) => (
+              <TripCard key={trip.id} trip={trip as unknown as TripPublic} />
+            ))}
           </div>
 
           {/* Bottom CTA */}

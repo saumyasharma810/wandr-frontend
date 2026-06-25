@@ -4,42 +4,63 @@ export type VibeTag = "loved_it" | "mixed" | "never_again" | "neutral";
 export type TravelStyle = "solo" | "couple" | "group" | "family";
 export type BudgetLevel = "backpacker" | "mid" | "luxury";
 
+export interface TripStopPublic {
+  id: number;
+  trip_id: number;
+  created_at: string;
+  city: string;
+  country: string;
+  arrival_date: string;
+  departure_date: string;
+  vibe: VibeTag;
+  notes?: string | null;
+  highlight?: string | null;
+  lowlight?: string | null;
+  would_return: boolean;
+  order: number;
+}
+
+export interface TripStopCreate {
+  city: string;
+  country: string;
+  arrival_date: string;
+  departure_date: string;
+  vibe: VibeTag;
+  notes?: string | null;
+  highlight?: string | null;
+  lowlight?: string | null;
+  would_return: boolean;
+  order?: number | null;
+}
+
+export interface TripStopUpdate extends Partial<TripStopCreate> {}
+
 export interface TripPublic {
   id: number;
   user_id: number;
   created_at: string;
-  country: string;
-  city?: string | null;
-  start_date?: string | null;
-  end_date?: string | null;
-  duration_days?: number | null;
-  vibe?: VibeTag | null;
-  notes?: string | null;
-  highlight?: string | null;
-  lowlight?: string | null;
-  would_return?: boolean | null;
+  title?: string | null;
+  start_date: string;
+  end_date: string;
+  travel_style: TravelStyle;
+  budget_level: BudgetLevel;
   is_public: boolean;
-  travel_style?: TravelStyle | null;
-  budget_level?: BudgetLevel | null;
+  ai_summary?: string | null;
+  countries: string[];
+  stops: TripStopPublic[];
 }
 
 export interface TripCreate {
-  country: string;
-  city?: string | null;
-  start_date?: string | null;
-  end_date?: string | null;
-  duration_days?: number | null;
-  vibe?: VibeTag | null;
-  notes?: string | null;
-  highlight?: string | null;
-  lowlight?: string | null;
-  would_return?: boolean | null;
+  title?: string | null;
+  start_date: string;
+  end_date: string;
+  travel_style: TravelStyle;
+  budget_level: BudgetLevel;
   is_public?: boolean;
-  travel_style?: TravelStyle | null;
-  budget_level?: BudgetLevel | null;
+  stops: TripStopCreate[];
 }
 
-export interface TripUpdate extends Partial<TripCreate> {}
+export interface TripUpdate extends Partial<Omit<TripCreate, "stops">> {}
 
 export interface StrangerTipPublic {
   id: number;

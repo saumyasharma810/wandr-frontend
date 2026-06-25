@@ -183,3 +183,22 @@ export function getCityCoords(city: string): Coords | null {
   const key = city.toLowerCase().trim();
   return CITY_COORDS[key] ?? null;
 }
+
+// Static lookup first, Mapbox geocoding as fallback for cities not in CITY_COORDS.
+export async function resolveCityCoords(city: string): Promise<Coords | null> {
+  const staticCoords = getCityCoords(city);
+  if (staticCoords) return staticCoords;
+  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  if (!token) return null;
+  try {
+    const res = await fetch(
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(city)}.json?types=place&limit=1&access_token=${token}`
+    );
+    const data = await res.json();
+    const feature = data.features?.[0];
+    if (!feature) return null;
+    return [feature.geometry.coordinates[0], feature.geometry.coordinates[1]];
+  } catch {
+    return null;
+  }
+}

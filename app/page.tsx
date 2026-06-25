@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "./contexts/AuthContext";
 import { MOCK_TRIPS } from "./lib/mock-data";
+import { countriesLabel, dominantVibe, previewNotes } from "./lib/trip-helpers";
 import VibeChip from "./components/VibeChip";
 
 export default function LandingPage() {
@@ -133,19 +134,16 @@ export default function LandingPage() {
                       color: "#2C2825",
                     }}
                   >
-                    {trip.city}
+                    {trip.title ?? countriesLabel(trip)}
                   </h3>
-                  <p className="text-sm mt-0.5" style={{ color: "#8C8279" }}>
-                    {trip.country}
-                  </p>
                 </div>
-                <VibeChip vibe={trip.vibe} />
+                <VibeChip vibe={dominantVibe(trip)} />
               </div>
               <p
                 className="text-sm leading-relaxed line-clamp-3"
                 style={{ color: "#2C2825" }}
               >
-                {trip.notes}
+                {previewNotes(trip)}
               </p>
             </Link>
           ))}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { UserPublic, TripPublic } from "../lib/types";
 import { getMe, getTrips, authLogout } from "../lib/api";
 import { VIBE_CONFIG } from "../lib/mock-data";
+import { countriesLabel, dominantVibe } from "../lib/trip-helpers";
 import { useRequireAuth } from "../contexts/AuthContext";
 import VibeChip from "../components/VibeChip";
 import { useRouter } from "next/navigation";
@@ -47,11 +48,11 @@ export default function ProfilePage() {
     return <div className="flex items-center justify-center h-64" style={{ color: "#8C8279" }}>Loading…</div>;
   }
 
-  const countries = new Set(trips.map((t) => t.country)).size;
+  const countries = new Set(trips.flatMap((t) => t.countries)).size;
 
   const vibeCounts = trips.reduce((acc, t) => {
-    if (!t.vibe) return acc;
-    return { ...acc, [t.vibe]: (acc[t.vibe] || 0) + 1 };
+    const vibe = dominantVibe(t);
+    return { ...acc, [vibe]: (acc[vibe] || 0) + 1 };
   }, {} as Record<string, number>);
 
   const topVibeEntry = Object.entries(vibeCounts).sort((a, b) => b[1] - a[1])[0];
@@ -146,12 +147,11 @@ export default function ProfilePage() {
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-base font-medium" style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#2C2825" }}>
-                      {trip.city ?? trip.country}
+                      {trip.title ?? countriesLabel(trip)}
                     </span>
-                    {trip.city && <span className="text-sm" style={{ color: "#8C8279" }}>{trip.country}</span>}
                   </div>
                   <div className="flex items-center gap-3">
-                    {trip.vibe && <VibeChip vibe={trip.vibe} />}
+                    <VibeChip vibe={dominantVibe(trip)} />
                     {trip.start_date && (
                       <span className="text-xs" style={{ color: "#8C8279" }}>
                         {new Date(trip.start_date).toLocaleDateString("en-US", { month: "short", year: "numeric" })}

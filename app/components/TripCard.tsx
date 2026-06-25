@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { TripPublic } from "../lib/types";
 import { VIBE_CONFIG } from "../lib/mock-data";
-import VibeChip from "./VibeChip";
+import { countriesLabel, dominantVibe, previewNotes } from "../lib/trip-helpers";
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -26,8 +26,10 @@ const BUDGET_LABEL: Record<string, string> = {
 };
 
 export default function TripCard({ trip }: { trip: TripPublic }) {
-  const vibe = trip.vibe ?? "neutral";
+  const vibe = dominantVibe(trip);
   const cfg = VIBE_CONFIG[vibe];
+  const notes = previewNotes(trip);
+  const location = countriesLabel(trip);
 
   return (
     <Link href={`/trips/${trip.id}`} className="block" style={{ textDecoration: "none" }}>
@@ -56,10 +58,10 @@ export default function TripCard({ trip }: { trip: TripPublic }) {
               className="text-lg font-semibold leading-tight"
               style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#2C2825" }}
             >
-              {trip.city ?? trip.country}
+              {trip.title ?? location}
             </h3>
             <p className="text-sm mt-0.5" style={{ color: "#8C8279" }}>
-              {trip.city ? trip.country : null}
+              {trip.title ? location : null}
               {trip.start_date ? ` · ${formatDate(trip.start_date)}` : ""}
             </p>
           </div>
@@ -77,12 +79,12 @@ export default function TripCard({ trip }: { trip: TripPublic }) {
           </span>
         </div>
 
-        {trip.notes && (
+        {notes && (
           <p
             className="text-sm leading-relaxed line-clamp-2"
             style={{ color: "#2C2825" }}
           >
-            {trip.notes}
+            {notes}
           </p>
         )}
 
